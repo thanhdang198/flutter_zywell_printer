@@ -7,9 +7,38 @@ import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 class MockZywellPrinterPlatform
     with MockPlatformInterfaceMixin
     implements ZywellPrinterPlatform {
-
   @override
   Future<String?> getPlatformVersion() => Future.value('42');
+
+  @override
+  Future<void> connectBluetooth(String address) {
+    // TODO: implement connectBluetooth
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> connectIp(String ip) {
+    // TODO: implement connectIp
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> connectUSB(String address) {
+    // TODO: implement connectUSB
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> disconnect() {
+    // TODO: implement disconnect
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> printText(text) {
+    // TODO: implement printText
+    throw UnimplementedError();
+  }
 }
 
 void main() {
