@@ -27,7 +27,7 @@ abstract class ZywellPrinterPlatform extends PlatformInterface {
     throw UnimplementedError('platformVersion() has not been implemented.');
   }
 
-  Future<void> connectIp(String ip) {
+  Future<bool> connectIp(String ip) {
     throw UnimplementedError('connectIp() has not been implemented.');
   }
 

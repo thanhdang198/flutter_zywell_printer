@@ -17,7 +17,7 @@ class MockZywellPrinterPlatform
   }
 
   @override
-  Future<void> connectIp(String ip) {
+  Future<bool> connectIp(String ip) {
     // TODO: implement connectIp
     throw UnimplementedError();
   }

@@ -19,7 +19,7 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   String _platformVersion = 'Unknown';
   final _zywellPrinterPlugin = ZywellPrinter();
-
+  List<NetworkAddress> devices = [];
   @override
   void initState() {
     super.initState();
@@ -119,6 +119,18 @@ class _MyAppState extends State<MyApp> {
           children: [
             FloatingActionButton(
               onPressed: () {
+                _zywellPrinterPlugin.scanWifi((NetworkAddress addr) {
+                  print('Found device: ${addr.ip}');
+                  setState(() {
+                    devices.add(addr);
+                  });
+                }, '192.168.0.207');
+              },
+              tooltip: 'Scan',
+              child: const Icon(Icons.scanner),
+            ),
+            FloatingActionButton(
+              onPressed: () {
                 printText();
               },
               tooltip: 'Increment',
@@ -151,7 +163,41 @@ class _MyAppState extends State<MyApp> {
           title: const Text('Plugin example app'),
         ),
         body: Center(
-          child: Text('Running on: $_platformVersion\n'),
+          child: Column(
+            children: [
+              Text('Running on: $_platformVersion\n'),
+              ...List.generate(
+                  devices.length,
+                  (index) => InkWell(
+                        onTap: () async {
+                          bool isSuccess = await _zywellPrinterPlugin
+                              .connectIp(devices[index].ip);
+                          if (isSuccess) {
+                            setState(() {
+                              _platformVersion =
+                                  'Connected to ${devices[index].ip}';
+                            });
+                            print('Connected to ${devices[index].ip}');
+                          } else {
+                            setState(() {
+                              _platformVersion =
+                                  'Failed to connect to ${devices[index].ip}';
+                            });
+                            print('Failed to connect to ${devices[index].ip}');
+                          }
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                              border: Border.all(color: Colors.black),
+                              borderRadius: BorderRadius.circular(10)),
+                          child: ListTile(
+                            title: Text(devices[index].ip),
+                          ),
+                        ),
+                      ))
+            ],
+          ),
         ),
       ),
     );

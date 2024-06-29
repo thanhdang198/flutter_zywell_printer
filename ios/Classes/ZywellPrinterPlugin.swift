@@ -33,10 +33,13 @@ public class ZywellPrinterPlugin: NSObject, FlutterPlugin {
   public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     switch call.method {
     case "getPlatformVersion":
+        
+        var res = TscCommand.checkPrinterStatusByPort9100();
+        print(res ?? "Failed to check")
       result("iOS " + UIDevice.current.systemVersion)
     case "connectIp":
         let args = call.arguments as! String
-        connectIp(ipAddress: args)
+        connectIp(ipAddress: args, result: result)
     case "printText":
         let data = call.arguments as? NSDictionary?
             //guard let oWayPoints = arguments?["wayPoints"] as? NSDictionary else {return}
@@ -52,18 +55,23 @@ public class ZywellPrinterPlugin: NSObject, FlutterPlugin {
 
                 printText(printData: printData, invoiceWidth: invoiceWidth, invoiceHeight: invoiceHeight)
             
+    case "disconnect":
+        wifiManager?.posDisConnect()
         
     default:
       result(FlutterMethodNotImplemented)
     }
   }
-    @objc func connectIp(ipAddress: String) -> Void {
+    @objc func connectIp(ipAddress: String, result: @escaping FlutterResult) -> Void {
+        // End previous session and start print new page
         
         wifiManager?.posDisConnect();
         wifiManager?.posConnect(withHost: ipAddress, port: 9100, completion: { (isConnect) in
             if isConnect {
+                result(true)
                 print("connected")
             } else {
+                result(false)
                 print("not connected")
             }
         })
@@ -94,6 +102,16 @@ public class ZywellPrinterPlugin: NSObject, FlutterPlugin {
 //        data = TscCommand.textWith(x: 0, andY: 0, andFont: "TSS24.BF2", andRotation: 0, andX_mul: 1, andY_mul: 1, andContent: "12345678abcd", usStrEnCoding: NSASCIIStringEncoding) as NSData
 //        dataM.append(data as Data)
 
+        data = TscCommand.print(1) as NSData
+        dataM.append(data as Data)
+
+        data = TscCommand.eoj() as NSData
+        dataM.append(data as Data)
+
+        
+        data = TscCommand.delay(3000 ) as NSData
+        dataM.append(data as Data)
+        
         data = TscCommand.print(1) as NSData
         dataM.append(data as Data)
 

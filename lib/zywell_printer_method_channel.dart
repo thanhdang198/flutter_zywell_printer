@@ -17,8 +17,8 @@ class MethodChannelZywellPrinter extends ZywellPrinterPlatform {
   }
 
   @override
-  Future<void> connectIp(String ip) async {
-    await methodChannel.invokeMethod('connectIp', ip);
+  Future<bool> connectIp(String ip) async {
+    return await methodChannel.invokeMethod('connectIp', ip);
   }
 
   @override
