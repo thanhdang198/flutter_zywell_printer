@@ -1,6 +1,7 @@
 package vn.thanhdt.zywell_printer
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
@@ -16,10 +17,10 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
-import android.net.Uri
 import android.os.Build
 import android.os.IBinder
 import android.os.Parcelable
+import android.util.Base64
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -41,7 +42,6 @@ import io.flutter.plugin.common.MethodChannel.Result
 import net.posprinter.posprinterface.PrinterBinder
 import net.posprinter.posprinterface.ProcessData
 import net.posprinter.posprinterface.TaskCallback
-import net.posprinter.service.PosprinterService
 import net.posprinter.service.PrinterConnectionsService
 import net.posprinter.utils.BitmapProcess
 import net.posprinter.utils.BitmapToByteData
@@ -49,7 +49,6 @@ import net.posprinter.utils.DataForSendToPrinterPos58
 import net.posprinter.utils.DataForSendToPrinterPos80
 import net.posprinter.utils.DataForSendToPrinterTSC
 import net.posprinter.utils.PosPrinterDev
-import net.posprinter.utils.StringUtils
 import java.util.Locale
 import java.util.Timer
 import java.util.TimerTask
@@ -71,7 +70,7 @@ class ZywellPrinterPlugin : FlutterPlugin, MethodCallHandler {
     private var address: String = ""
     private var mSerconnection: ServiceConnection? = null
     private var firstPrint = false
-    private var printCount =1;
+    private var printCount = 1;
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         applicationContext = flutterPluginBinding.applicationContext
         this.flutterPluginBinding = flutterPluginBinding
@@ -112,6 +111,11 @@ class ZywellPrinterPlugin : FlutterPlugin, MethodCallHandler {
 
             disConnect(address)
         }
+
+        if (call.method == "clearBuffer") {
+            clearBuffer(address, result)
+
+        }
         if (call.method == "getPlatformVersion") {
             result.success("Android ${android.os.Build.VERSION.RELEASE}")
         }
@@ -134,11 +138,9 @@ class ZywellPrinterPlugin : FlutterPlugin, MethodCallHandler {
             val usbAddress: String = call.arguments as String
             connectUSB(usbAddress)
         }
-        if(call.method == "printImage"){
-            val imagePath: String = call.arguments as String
-            printPicture(imagePath, call, result)
-        }
-        else {
+        if (call.method == "printImage") {
+            printPicture(call, result)
+        } else {
             println(call.method)
             result.notImplemented()
         }
@@ -675,180 +677,72 @@ class ZywellPrinterPlugin : FlutterPlugin, MethodCallHandler {
 //        }
 //    }
 
-    private fun printPicture(imagePath: String, call: MethodCall, result: Result) {
-//        val options = call.arguments as HashMap<*, *>
-        val imageUri = Uri.parse(imagePath)
-        val realPath = imageUri.path
+    @SuppressLint("SuspiciousIndentation")
+    private fun printPicture(call: MethodCall, result: Result) {
+        printerBinder!!.clearBuffer(address)
 
-        val size: Int = 100// options.getInt("size")
-        val width: Int = 100//options.getInt("width")
-        val isDisconnect = false
-//            if (options.hasKey("is_disconnect")) {
-//            options.getBoolean("is_disconnect")
-//        } else {
-//            false
-//        }
-        val isCutPaper = true
-//            if (options.hasKey("cut_paper")) {
-//            options.getBoolean("cut_paper")
-//        } else {
-//            true
-//        }
-        val mode = "THERMAL"
-//        if (options.hasKey("mode")) {
-//            options.getString("mode")
-//        } else {
-//            "THERMAL"
-//        }
+        val invoiceWidth: Double = call.argument<Double>("invoiceWidth")!!
+        val invoiceHeight: Double = call.argument<Double>("invoiceHeight")!!
+        val gapWidth: Double = call.argument<Double>("gapWidth")!!
+        val gapHeight: Double = call.argument<Double>("gapHeight")!!
+        val imageTargetWidth: Double = call.argument<Double>("imageTargetWidth")!!
+        val encodedImage: String = call.argument<String>("image")!!
 
-        val bitmap = BitmapFactory.decodeFile(realPath)
-        if (mode == "LABEL") {
-            val paper_size = 50
-//                if (options.hasKey("paper_size")) {
-//                options.getInt("paper_size")
-//            } else {
-//                50
-//            }
-            if (bitmap != null && address != null) {
-                val bitmap1 =
-                    BitmapProcess.compressBmpByYourWidth(bitmap, width)
-                val bitmapToPrint: Bitmap = convertGreyImg(bitmap1)
-                printerBinder!!.writeDataByYouself(
-                    address,
-                    object : TaskCallback {
-                        override fun OnSucceed() {
-                            result.success(true)
-                            if (isDisconnect) {
-                                val task: TimerTask = object : TimerTask() {
-                                    override fun run() {
-                                        printerBinder!!.disconnectCurrentPort(
-                                            address, object : TaskCallback {
-                                                override fun OnSucceed() {
-                                                    Log.d(
-                                                        "disconnectCurrentPort",
-                                                        "disconnect success"
-                                                    )
-                                                }
 
-                                                override fun OnFailed() {}
-                                            })
-                                    }
-                                }
-                                val timer = Timer()
-                                timer.schedule(task, 1500)
-                            }
-                        }
+        val decodedString: ByteArray = Base64.decode(encodedImage, Base64.DEFAULT)
+        val bitmap = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
 
-                        override fun OnFailed() {
-                            result.success(false)
-                        }
+        if (bitmap != null && address != null) {
+            val bitmap1 =
+                BitmapProcess.compressBmpByYourWidth(bitmap, imageTargetWidth.toInt())
+            val bitmapToPrint: Bitmap = convertGreyImg(bitmap1)
+            printerBinder!!.writeDataByYouself(
+                address,
+                object : TaskCallback {
+                    override fun OnSucceed() {
+                        printerBinder!!.clearBuffer(address)
+                        result.success(true)
+
                     }
-                ) {
-                    val list: MutableList<ByteArray> = ArrayList()
-                    // 设置标签纸大小
-                    list.add(
-                        DataForSendToPrinterTSC.sizeBymm(
-                            paper_size.toDouble(),
-                            30.0
-                        )
-                    )
-                    // 设置间隙
-                    list.add(DataForSendToPrinterTSC.gapBymm(3.0, 0.0))
-                    // 清除缓存
-                    list.add(DataForSendToPrinterTSC.cls())
-                    list.add(
-                        DataForSendToPrinterTSC.bitmap(
-                            -2, 10, 0, bitmapToPrint,
-                            BitmapToByteData.BmpType.Threshold
-                        )
-                    )
-                    list.add(DataForSendToPrinterTSC.print(1))
-                    list
+
+                    override fun OnFailed() {
+                        printerBinder!!.clearBuffer(address)
+
+                        result.success(false)
+                    }
                 }
-            } else {
-                result.success(false)
+            ) {
+                val list: MutableList<ByteArray> = ArrayList()
+                // 设置标签纸大小
+
+                list.add(DataForSendToPrinterPos58.initializePrinter())
+                list.add(
+                    DataForSendToPrinterTSC.sizeBymm(
+                        invoiceWidth,
+                        invoiceHeight
+                    )
+                )
+                // 设置间隙
+                list.add(DataForSendToPrinterTSC.gapBymm(gapWidth, gapHeight))
+                // 清除缓存
+                list.add(DataForSendToPrinterTSC.cls())
+                list.add(
+                    DataForSendToPrinterTSC.bitmap(
+                        -2, 10, 0, bitmapToPrint,
+                        BitmapToByteData.BmpType.Threshold
+                    )
+                )
+                list.add(DataForSendToPrinterTSC.print(1))
+
+                list.add(DataForSendToPrinterTSC.cut())
+                list.add(DataForSendToPrinterTSC.eop())
+                list.add(DataForSendToPrinterTSC.eoj())
+                list.add(DataForSendToPrinterPos58.endOfLable())
+
+                list
             }
         } else {
-            if (bitmap != null && address != null) {
-                val bitmap1 =
-                    BitmapProcess.compressBmpByYourWidth(bitmap, width)
-                val bitmapToPrint: Bitmap = convertGreyImg(bitmap1)
-                printerBinder!!.writeDataByYouself(
-                    address,
-                    object : TaskCallback {
-                        override fun OnSucceed() {
-                            result.success(true)
-                            if (isDisconnect) {
-                                val task: TimerTask = object : TimerTask() {
-                                    override fun run() {
-                                        printerBinder!!.disconnectCurrentPort(
-                                            address, object : TaskCallback {
-                                                override fun OnSucceed() {
-                                                    Log.d(
-                                                        "disconnectCurrentPort",
-                                                        "disconnect success"
-                                                    )
-                                                }
-
-                                                override fun OnFailed() {}
-                                            })
-                                    }
-                                }
-                                val timer = Timer()
-                                timer.schedule(task, 3000)
-                            }
-                        }
-
-                        override fun OnFailed() {
-                            result.success(false)
-                        }
-                    }
-                ) {
-                    val list: MutableList<ByteArray> = ArrayList()
-                    if (size == 58) {
-                        list.add(DataForSendToPrinterPos58.initializePrinter())
-                    } else {
-                        list.add(DataForSendToPrinterPos80.initializePrinter())
-                    }
-                    var blist: List<Bitmap?> =
-                        ArrayList()
-                    blist = BitmapProcess.cutBitmap(50, bitmapToPrint)
-                    for (i in blist.indices) {
-                        if (size == 58) {
-                            list.add(
-                                DataForSendToPrinterPos58.printRasterBmp(
-                                    0, blist[i], BitmapToByteData.BmpType.Dithering,
-                                    BitmapToByteData.AlignType.Left, width
-                                )
-                            )
-                        } else {
-                            list.add(
-                                DataForSendToPrinterPos80.printRasterBmp(
-                                    0, blist[i], BitmapToByteData.BmpType.Dithering,
-                                    BitmapToByteData.AlignType.Left, width
-                                )
-                            )
-                        }
-                    }
-
-                    if (size == 58 && isCutPaper) {
-                        list.add(DataForSendToPrinterPos58.printAndFeedLine())
-                    } else if (isCutPaper) {
-                        list.add(DataForSendToPrinterPos80.printAndFeedLine())
-                    }
-
-                    if (size == 80 && isCutPaper) {
-                        list.add(
-                            DataForSendToPrinterPos80.selectCutPagerModerAndCutPager(
-                                0x42, 0x66
-                            )
-                        )
-                    }
-                    list
-                }
-            } else {
-                result.success(false)
-            }
+            result.success(false)
         }
     }
 
@@ -1048,7 +942,7 @@ class ZywellPrinterPlugin : FlutterPlugin, MethodCallHandler {
         }
     }
 
-    fun clearBuffer(ip: String?, result: Result) {
+    private fun clearBuffer(ip: String?, result: Result) {
         if (ip != null) {
             printerBinder!!.clearBuffer(address)
             result.success(true)

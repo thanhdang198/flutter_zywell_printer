@@ -50,6 +50,10 @@ abstract class ZywellPrinterPlatform extends PlatformInterface {
     throw UnimplementedError('connectUSB() has not been implemented.');
   }
 
+  Future<bool> clearBuffer() {
+    throw UnimplementedError('clearBuffer() has not been implemented.');
+  }
+
   Future<void> printImage(dynamic data) {
     throw UnimplementedError('printImage() has not been implemented.');
   }

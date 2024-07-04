@@ -4,10 +4,11 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 
 import 'package:flutter/services.dart';
+import 'package:widgets_to_image/widgets_to_image.dart';
 import 'package:zywell_printer/print_row_data.dart';
 import 'package:zywell_printer/zywell_printer.dart';
 
-import 'package:image/image.dart' as img;
+import 'package:zywell_printer_example/demo_invoce.dart';
 
 void main() {
   runApp(const MyApp());
@@ -24,6 +25,10 @@ class _MyAppState extends State<MyApp> {
   String _platformVersion = 'Unknown';
   final _zywellPrinterPlugin = ZywellPrinter();
   List<NetworkAddress> devices = [];
+  WidgetsToImageController controller = WidgetsToImageController();
+// to save image bytes of widget
+  Uint8List? bytes;
+
   @override
   void initState() {
     super.initState();
@@ -50,6 +55,16 @@ class _MyAppState extends State<MyApp> {
     setState(() {
       _platformVersion = platformVersion;
     });
+  }
+
+  clearBuffer() async {
+    try {
+      await _zywellPrinterPlugin.clearBuffer();
+    } catch (e) {
+      print(e);
+      print('Zywell Printer Plugin Error');
+      print('Failed to clear buffer.');
+    }
   }
 
   connectPrinter() async {
@@ -89,26 +104,77 @@ class _MyAppState extends State<MyApp> {
 
   printPicture() async {
     try {
+      /// Load bytes from assets
       ByteData imageBytes = await rootBundle.load('assets/80m.png');
+
+      /// Convert to Uint8List
       List<int> values = imageBytes.buffer.asUint8List();
 
       Uint8List bytes = Uint8List.fromList(values);
 
-      // _zywellPrinterPlugin.printImage(
-      //     image: bytes,
-      //     invoiceWidth: 60,
-      //     invoiceHeight: 300,
-      //     gapWidth: -20,
-      //     gapHeight: 10,
-      //     imageTargetWidth: 400);
-
       _zywellPrinterPlugin.printImage(
           image: bytes,
-          invoiceWidth: 90,
-          invoiceHeight: 90,
-          gapWidth: 10,
+
+          /// Độ rộng của hoá đơn
+          invoiceWidth: 80,
+
+          /// Độ dài của hoá đơn
+          invoiceHeight: 200,
+
+          /// Padding trái phải của ảnh
+          gapWidth: 50,
+
+          /// Padding trên dưới của ảnh
           gapHeight: 10,
-          imageTargetWidth: 400);
+
+          /// Độ rộng của ảnh dùng để in
+          imageTargetWidth: 600);
+
+      // _zywellPrinterPlugin.printImage(
+      //     image: bytes,
+      //     invoiceWidth: 50,
+      //     invoiceHeight: 200,
+      //     gapWidth: 10,
+      //     gapHeight: 10,
+      //     imageTargetWidth: 450);
+    } catch (e) {
+      print(e);
+      print('Zywell Printer Plugin Error');
+      print('Failed to print picture.');
+    }
+  }
+
+  printWidget() async {
+    try {
+      final d = await controller.capture();
+      setState(() {
+        bytes = d;
+      });
+      _zywellPrinterPlugin.printImage(
+          image: d!,
+
+          /// Độ rộng của hoá đơn
+          invoiceWidth: 80,
+
+          /// Độ dài của hoá đơn
+          invoiceHeight: 160,
+
+          /// Padding trái phải của ảnh
+          gapWidth: 10,
+
+          /// Padding trên dưới của ảnh
+          gapHeight: 10,
+
+          /// Độ rộng của ảnh dùng để in
+          imageTargetWidth: 600);
+
+      // _zywellPrinterPlugin.printImage(
+      //     image: bytes,
+      //     invoiceWidth: 50,
+      //     invoiceHeight: 200,
+      //     gapWidth: 10,
+      //     gapHeight: 10,
+      //     imageTargetWidth: 450);
     } catch (e) {
       print(e);
       print('Zywell Printer Plugin Error');
@@ -180,6 +246,11 @@ class _MyAppState extends State<MyApp> {
                 },
                 child: const Icon(Icons.image)),
             FloatingActionButton(
+                onPressed: () {
+                  printWidget();
+                },
+                child: const Icon(Icons.widgets)),
+            FloatingActionButton(
               onPressed: () {
                 connectPrinter();
               },
@@ -188,10 +259,11 @@ class _MyAppState extends State<MyApp> {
             ),
             FloatingActionButton(
               onPressed: () {
-                connectIp();
+                // connectIp();
+                clearBuffer();
               },
               tooltip: 'Increment',
-              child: const Icon(Icons.add),
+              child: const Icon(Icons.clear),
             ),
             FloatingActionButton(
               onPressed: () {
@@ -238,7 +310,12 @@ class _MyAppState extends State<MyApp> {
                             title: Text(devices[index].ip),
                           ),
                         ),
-                      ))
+                      )),
+              WidgetsToImage(
+                controller: controller,
+                child: const DemoInvoice(),
+              ),
+              if (bytes != null) Image.memory(bytes!),
             ],
           ),
         ),

@@ -248,6 +248,10 @@ public class ZywellPrinterPlugin: NSObject, FlutterPlugin {
         guard let image = imageCompressForWidthScale(sourceImage: uiImage, targetWidth: imageTargetWidth) else { return }
         var dataM = Data()
         var data = Data()
+        data=TscCommand.cls()
+        dataM.append(data)
+        data = TscCommand.initialPrinter()
+        dataM.append(data)
         
         data = TscCommand.sizeBymm(withWidth: invoiceWidth, andHeight: invoiceHeight)
         dataM.append(data)

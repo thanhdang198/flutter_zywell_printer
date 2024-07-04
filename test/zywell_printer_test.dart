@@ -39,6 +39,12 @@ class MockZywellPrinterPlatform
     // TODO: implement printText
     throw UnimplementedError();
   }
+
+  @override
+  Future<void> printImage(data) {
+    // TODO: implement printImage
+    throw UnimplementedError();
+  }
 }
 
 void main() {

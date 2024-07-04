@@ -30,6 +30,10 @@ class ZywellPrinter {
     }
   }
 
+  Future<bool> clearBuffer() {
+    return ZywellPrinterPlatform.instance.clearBuffer();
+  }
+
   Future<String?> getPlatformVersion() {
     return ZywellPrinterPlatform.instance.getPlatformVersion();
   }

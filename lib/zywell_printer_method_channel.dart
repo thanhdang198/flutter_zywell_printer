@@ -39,6 +39,11 @@ class MethodChannelZywellPrinter extends ZywellPrinterPlatform {
   }
 
   @override
+  Future<bool> clearBuffer() async {
+    return await methodChannel.invokeMethod('clearBuffer');
+  }
+
+  @override
   Future<void> connectBluetooth(String address) async {
     await methodChannel.invokeMethod('connectBluetooth', address);
   }
