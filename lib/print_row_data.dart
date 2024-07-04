@@ -7,7 +7,7 @@ class PrintRowData {
   final PrintType contentType;
 
   /// font is 0 -> 8
-  final String font = "2";
+  final String font;
 
   /// width will apply for barcode and qr, not for text
   final double width;
@@ -20,6 +20,7 @@ class PrintRowData {
       this.paddingLeft = 10,
       this.width = 100,
       this.height = 100,
+      this.font = "2",
       this.contentType = PrintType.text,
       required this.paddingToTopOfInvoice});
   toJson() {

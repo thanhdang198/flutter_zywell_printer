@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
@@ -24,6 +26,11 @@ class MethodChannelZywellPrinter extends ZywellPrinterPlatform {
   @override
   Future<void> disconnect() async {
     await methodChannel.invokeMethod('disconnect');
+  }
+
+  @override
+  Future<void> printImage(dynamic data) async {
+    await methodChannel.invokeMethod('printImage', data);
   }
 
   @override

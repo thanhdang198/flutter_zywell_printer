@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 import 'zywell_printer_method_channel.dart';
@@ -46,5 +48,9 @@ abstract class ZywellPrinterPlatform extends PlatformInterface {
 
   Future<void> connectUSB(String address) {
     throw UnimplementedError('connectUSB() has not been implemented.');
+  }
+
+  Future<void> printImage(dynamic data) {
+    throw UnimplementedError('printImage() has not been implemented.');
   }
 }

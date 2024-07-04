@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'dart:developer';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:ping_discover_network_plus/ping_discover_network_plus.dart';
@@ -40,8 +42,27 @@ class ZywellPrinter {
     return ZywellPrinterPlatform.instance.disconnect();
   }
 
+  Future<void> printImage(
+      {required Uint8List image,
+      double invoiceWidth = 50,
+      required double invoiceHeight,
+      double gapWidth = 0,
+      double gapHeight = 0,
+      double imageTargetWidth = 0}) {
+    return ZywellPrinterPlatform.instance.printImage({
+      'image': base64.encode(image),
+      'invoiceWidth': invoiceWidth,
+      'invoiceHeight': invoiceHeight,
+      'gapWidth': gapWidth,
+      'gapHeight': gapHeight,
+      'imageTargetWidth': imageTargetWidth
+    });
+  }
+
   Future<void> printText(
-      List<PrintRowData> printData, double invoiceWidth, double invoiceHeight) {
+      {required List<PrintRowData> printData,
+      double invoiceWidth = 50,
+      required double invoiceHeight}) {
     List printDataJson = printData.map((e) => e.toJson()).toList();
     return ZywellPrinterPlatform.instance.printText({
       'printData': printDataJson,

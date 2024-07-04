@@ -36,10 +36,11 @@ public class ZywellPrinterPlugin: NSObject, FlutterPlugin {
   }
 
   public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+  // MARK: - Handle method call
     switch call.method {
     case "getPlatformVersion":
         
-        var res = TscCommand.checkPrinterStatusByPort9100();
+        let res = TscCommand.checkPrinterStatusByPort9100();
         print(res ?? "Failed to check")
       result("iOS " + UIDevice.current.systemVersion)
     case "connectIp":
@@ -62,7 +63,8 @@ public class ZywellPrinterPlugin: NSObject, FlutterPlugin {
             
     case "disconnect":
         wifiManager?.posDisConnect()
-        
+    case "printImage":
+        labelPictureClick(call: call, result: result)
     default:
       result(FlutterMethodNotImplemented)
     }
@@ -128,7 +130,7 @@ public class ZywellPrinterPlugin: NSObject, FlutterPlugin {
             let y = item["paddingToTopOfInvoice"] as! Int32
             let font = item["font"] as! String
             let content = item["text"] as! String
-            data = TscCommand.textWith(x: x, andY: y, andFont: font, andRotation: 0, andX_mul: 1, andY_mul: 1, andContent: content, usStrEnCoding: NSASCIIStringEncoding) as NSData
+            data = TscCommand.textWith(x: x, andY: y, andFont: font, andRotation: 0, andX_mul: 1, andY_mul: 1, andContent: content, usStrEnCoding: NSUTF8StringEncoding) as NSData
             dataM.append(data as Data)
         }
 //        data = TscCommand.textWith(x: 0, andY: 0, andFont: "TSS24.BF2", andRotation: 0, andX_mul: 1, andY_mul: 1, andContent: "12345678abcd", usStrEnCoding: NSASCIIStringEncoding) as NSData
@@ -156,6 +158,114 @@ public class ZywellPrinterPlugin: NSObject, FlutterPlugin {
 
     }
 
+    // MARK: Convert bitmap to UIImage
+    func bitmapToUIImage(bitmap: UnsafePointer<UInt8>, width: Int, height: Int) -> UIImage? {
+        let bitsPerComponent: Int = 8
+        let bytesPerRow: Int = width * 4
+        
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let bitmapInfo = CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue)
+
+        if let data = CFDataCreate(nil, bitmap, width * height * 4) {
+            if let provider = CGDataProvider(data: data) {
+                if let cgImage = CGImage(
+                    width: width,
+                    height: height,
+                    bitsPerComponent: bitsPerComponent,
+                    bitsPerPixel: bitsPerComponent * 4,
+                    bytesPerRow: bytesPerRow,
+                    space: colorSpace,
+                    bitmapInfo: bitmapInfo,
+                    provider: provider,
+                    decode: nil,
+                    shouldInterpolate: true,
+                    intent: .defaultIntent
+                ) {
+                    return UIImage(cgImage: cgImage)
+                }
+            }
+        }
+        
+        return nil
+    }
+    
+    // MARK: - Compress image for print
+    func imageCompressForWidthScale(sourceImage: UIImage, targetWidth: CGFloat) -> UIImage? {
+        let imageSize = sourceImage.size
+        let width = imageSize.width
+        let height = imageSize.height
+        let targetHeight = height / (width / targetWidth)
+        let size = CGSize(width: targetWidth, height: targetHeight)
+        var scaleFactor: CGFloat = 0.0
+        var scaledWidth = targetWidth
+        var scaledHeight = targetHeight
+        var thumbnailPoint = CGPoint.zero
+
+        if !imageSize.equalTo(size) {
+            let widthFactor = targetWidth / width
+            let heightFactor = targetHeight / height
+
+            scaleFactor = (widthFactor > heightFactor) ? widthFactor : heightFactor
+            scaledWidth = width * scaleFactor
+            scaledHeight = height * scaleFactor
+
+            if widthFactor > heightFactor {
+                thumbnailPoint.y = (targetHeight - scaledHeight) * 0.5
+            } else if widthFactor < heightFactor {
+                thumbnailPoint.x = (targetWidth - scaledWidth) * 0.5
+            }
+        }
+
+        UIGraphicsBeginImageContext(size)
+        let thumbnailRect = CGRect(origin: thumbnailPoint, size: CGSize(width: scaledWidth, height: scaledHeight))
+        sourceImage.draw(in: thumbnailRect)
+        let newImage = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        
+        if newImage == nil {
+            print("scale image fail")
+        }
+        
+        return newImage
+    }
+    // MARK: - Label print picture
+    @IBAction func labelPictureClick(call: FlutterMethodCall, result: @escaping FlutterResult) {
+        
+        let myFlutterData = call.arguments as? NSDictionary
+        
+        let base64Image = myFlutterData?["image"] as? String
+        
+        
+        let invoiceWidth = myFlutterData?["invoiceWidth"] as! Double
+        let invoiceHeight = myFlutterData?["invoiceHeight"] as! Double
+        let gapWidth = myFlutterData?["gapWidth"] as! Double
+        let gapHeight = myFlutterData?["gapHeight"] as! Double
+        let imageTargetWidth = myFlutterData?["imageTargetWidth"] as! Double
+        let myData = Data(base64Encoded:base64Image!)!
+        
+        guard let uiImage = UIImage(data: myData)else{return }
+
+        guard let image = imageCompressForWidthScale(sourceImage: uiImage, targetWidth: imageTargetWidth) else { return }
+        var dataM = Data()
+        var data = Data()
+        
+        data = TscCommand.sizeBymm(withWidth: invoiceWidth, andHeight: invoiceHeight)
+        dataM.append(data)
+        data = TscCommand.gapBymm(withWidth:gapWidth, andHeight: gapHeight)
+        dataM.append(data)
+        data = TscCommand.cls()
+        dataM.append(data)
+        data = TscCommand.bitmapWith(x:10, andY: 10, andMode: 0, andImage: image, andBmpType: Dithering)
+        dataM.append(data)
+        data = TscCommand.print(1)
+        dataM.append(data)
+        
+        
+        wifiManager?.posWriteCommand(with: dataM)
+        
+    }
+
+    
     
 //    @objc(printPic:result:)
 //    func printPic(address: String, result: @escaping FlutterResult) {

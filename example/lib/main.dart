@@ -1,9 +1,13 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'dart:async';
 
 import 'package:flutter/services.dart';
 import 'package:zywell_printer/print_row_data.dart';
 import 'package:zywell_printer/zywell_printer.dart';
+
+import 'package:image/image.dart' as img;
 
 void main() {
   runApp(const MyApp());
@@ -83,25 +87,59 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
+  printPicture() async {
+    try {
+      ByteData imageBytes = await rootBundle.load('assets/80m.png');
+      List<int> values = imageBytes.buffer.asUint8List();
+
+      Uint8List bytes = Uint8List.fromList(values);
+
+      // _zywellPrinterPlugin.printImage(
+      //     image: bytes,
+      //     invoiceWidth: 60,
+      //     invoiceHeight: 300,
+      //     gapWidth: -20,
+      //     gapHeight: 10,
+      //     imageTargetWidth: 400);
+
+      _zywellPrinterPlugin.printImage(
+          image: bytes,
+          invoiceWidth: 90,
+          invoiceHeight: 90,
+          gapWidth: 10,
+          gapHeight: 10,
+          imageTargetWidth: 400);
+    } catch (e) {
+      print(e);
+      print('Zywell Printer Plugin Error');
+      print('Failed to print picture.');
+    }
+  }
+
   printText() async {
     try {
       List<PrintRowData> printData = [
-        PrintRowData(content: 'Hello World', paddingToTopOfInvoice: 10),
-        PrintRowData(content: 'Hello World', paddingToTopOfInvoice: 50),
-        PrintRowData(content: 'Hello World', paddingToTopOfInvoice: 90),
-        PrintRowData(content: 'Hello World', paddingToTopOfInvoice: 130),
-        PrintRowData(content: 'Hello World', paddingToTopOfInvoice: 170),
-        // PrintRowData(
-        //     contentType: PrintType.barcode,
-        //     content: 'Hello World',
-        //     paddingToTopOfInvoice: 170),
-        // PrintRowData(
-        //     contentType: PrintType.qr,
-        //     content: 'Hello World',
-        //     paddingToTopOfInvoice: 170),
-        PrintRowData(content: 'Hello World', paddingToTopOfInvoice: 170),
+        PrintRowData(
+            content: 'Hoa don ban hang', paddingToTopOfInvoice: 10, font: '3'),
+        PrintRowData(
+            content: 'TrueMotorCare', paddingToTopOfInvoice: 50, font: '4'),
+        PrintRowData(
+            content: 'Motor Care', paddingToTopOfInvoice: 90, font: '5'),
+        PrintRowData(
+            content: '-------------------------',
+            paddingToTopOfInvoice: 150,
+            font: '6'),
+        PrintRowData(
+            content: 'Don gia      So luong       Thanh tien',
+            paddingToTopOfInvoice: 170,
+            font: '7'),
+        PrintRowData(
+            content: 'Chinh ga         1           100.000đ',
+            paddingToTopOfInvoice: 200,
+            font: '8'),
       ];
-      await _zywellPrinterPlugin.printText(printData, 50, 80);
+      await _zywellPrinterPlugin.printText(
+          printData: printData, invoiceWidth: 50, invoiceHeight: 80);
     } catch (e) {
       print(e);
       print('Zywell Printer Plugin Error');
@@ -136,6 +174,11 @@ class _MyAppState extends State<MyApp> {
               tooltip: 'Increment',
               child: const Icon(Icons.print),
             ),
+            FloatingActionButton(
+                onPressed: () {
+                  printPicture();
+                },
+                child: const Icon(Icons.image)),
             FloatingActionButton(
               onPressed: () {
                 connectPrinter();

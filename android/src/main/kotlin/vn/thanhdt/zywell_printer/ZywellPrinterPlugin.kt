@@ -42,6 +42,7 @@ import net.posprinter.posprinterface.PrinterBinder
 import net.posprinter.posprinterface.ProcessData
 import net.posprinter.posprinterface.TaskCallback
 import net.posprinter.service.PosprinterService
+import net.posprinter.service.PrinterConnectionsService
 import net.posprinter.utils.BitmapProcess
 import net.posprinter.utils.BitmapToByteData
 import net.posprinter.utils.DataForSendToPrinterPos58
@@ -68,16 +69,19 @@ class ZywellPrinterPlugin : FlutterPlugin, MethodCallHandler {
     private var flutterPluginBinding: FlutterPlugin.FlutterPluginBinding? = null
     private var applicationContext: Context? = null
     private var address: String = ""
-    private var mSerconnection: ServiceConnection?=null
-
+    private var mSerconnection: ServiceConnection? = null
+    private var firstPrint = false
+    private var printCount =1;
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         applicationContext = flutterPluginBinding.applicationContext
         this.flutterPluginBinding = flutterPluginBinding
         //bind service，get imyBinder
-        val intent = Intent(flutterPluginBinding.applicationContext, PosprinterService::class.java)
+        val intent =
+            Intent(flutterPluginBinding.applicationContext, PrinterConnectionsService::class.java)
         mSerconnection = object : ServiceConnection {
             override fun onServiceConnected(name: ComponentName, service: IBinder) {
-                printerBinder = service as PrinterBinder
+                if (service is PrinterBinder)
+                    printerBinder = service as PrinterBinder
                 Log.e("myBinder", "connect")
             }
 
@@ -99,38 +103,43 @@ class ZywellPrinterPlugin : FlutterPlugin, MethodCallHandler {
     override fun onMethodCall(call: MethodCall, result: Result) {
         if (call.method == "connectIp") {
 //            result.success("Android ${android.os.Build.VERSION.RELEASE}")
-                val ip : String = call.arguments as String
+            val ip: String = call.arguments as String
 //            val ip: String = "192.168.0.207"
             address = ip
             connectNet(ip, result)
         }
-        if (call.method =="disconnect"){
+        if (call.method == "disconnect") {
 
             disConnect(address)
         }
-        if (call.method =="getPlatformVersion"){
+        if (call.method == "getPlatformVersion") {
             result.success("Android ${android.os.Build.VERSION.RELEASE}")
         }
-        if(call.method =="printText"){
-            val data:ArrayList<HashMap<String,Any>>? = call.argument("printData")
+        if (call.method == "printText") {
+            val data: ArrayList<HashMap<String, Any>>? = call.argument("printData")
 
             val invoiceWidth = call.argument<Double>("invoiceWidth")!!
             val invoiceHeight = call.argument<Double>("invoiceHeight")!!
             println(data)
-            if(data != null){
-                printText(data,invoiceWidth,invoiceHeight)
+            if (data != null) {
+                printText(data, invoiceWidth, invoiceHeight)
             }
         }
-        if(call.method == "connectBluetooth"){
+        if (call.method == "connectBluetooth") {
 //            val btAdress: String = "00:15:83:00:91:0A"
             val btAdress: String = call.arguments as String
             connectBT(btAdress, result)
         }
-        if(call.method == "connectUSB"){
+        if (call.method == "connectUSB") {
             val usbAddress: String = call.arguments as String
             connectUSB(usbAddress)
         }
+        if(call.method == "printImage"){
+            val imagePath: String = call.arguments as String
+            printPicture(imagePath, call, result)
+        }
         else {
+            println(call.method)
             result.notImplemented()
         }
     }
@@ -158,32 +167,37 @@ class ZywellPrinterPlugin : FlutterPlugin, MethodCallHandler {
                         printerBinder!!.connectNetPort(ipAddress, object : TaskCallback {
                             override fun OnSucceed() {
                                 Log.d("ip_address", "readBuffer ip: $ipAddress")
-                                result.success(true)
+
+//                                result.success(true)
                             }
 
                             override fun OnFailed() {
-                                result.success(false)
+//                                result.success(false)
                             }
                         })
                     }
 
                     override fun OnFailed() {
-                        result.success(false)
+//                        result.success(false)
                     }
                 })
             } else {
                 printerBinder!!.connectNetPort(ipAddress, object : TaskCallback {
                     override fun OnSucceed() {
-                        result.success(true)
+//                        result.success(true)
+                        ISCONNECT = true
+                        Toast.makeText(getZWApplicationContext(), "Connected", Toast.LENGTH_SHORT)
+                            .show()
+
                     }
 
                     override fun OnFailed() {
-                        result.success(false)
+//                        result.success(false)
                     }
                 })
             }
         } else {
-            result.success(false)
+//            result.success(false)
         }
     }
 
@@ -327,7 +341,7 @@ class ZywellPrinterPlugin : FlutterPlugin, MethodCallHandler {
      */
     private fun disConnect(ip: String) {
         if (ISCONNECT) {
-            printerBinder?.disconnectCurrentPort(ip,object : TaskCallback {
+            printerBinder?.disconnectCurrentPort(ip, object : TaskCallback {
                 override fun OnSucceed() {
                     ISCONNECT = false
                     Toast.makeText(getZWApplicationContext(), "disconnect ok", Toast.LENGTH_SHORT)
@@ -336,7 +350,11 @@ class ZywellPrinterPlugin : FlutterPlugin, MethodCallHandler {
 
                 override fun OnFailed() {
                     ISCONNECT = true
-                    Toast.makeText(getZWApplicationContext(), "disconnect failed", Toast.LENGTH_SHORT)
+                    Toast.makeText(
+                        getZWApplicationContext(),
+                        "disconnect failed",
+                        Toast.LENGTH_SHORT
+                    )
                         .show()
                 }
             })
@@ -658,13 +676,13 @@ class ZywellPrinterPlugin : FlutterPlugin, MethodCallHandler {
 //    }
 
     private fun printPicture(imagePath: String, call: MethodCall, result: Result) {
-        val options = call.arguments as HashMap<*, *>
+//        val options = call.arguments as HashMap<*, *>
         val imageUri = Uri.parse(imagePath)
         val realPath = imageUri.path
 
-        val size: Int =100// options.getInt("size")
+        val size: Int = 100// options.getInt("size")
         val width: Int = 100//options.getInt("width")
-        val isDisconnect =false
+        val isDisconnect = false
 //            if (options.hasKey("is_disconnect")) {
 //            options.getBoolean("is_disconnect")
 //        } else {
@@ -833,13 +851,19 @@ class ZywellPrinterPlugin : FlutterPlugin, MethodCallHandler {
             }
         }
     }
-    private fun printText(data:ArrayList<HashMap<String,Any>>,invoiceWidth:Double,invoiceHeight:Double) {
+
+    private fun printText(
+        data: ArrayList<HashMap<String, Any>>,
+        invoiceWidth: Double,
+        invoiceHeight: Double
+    ) {
 
         if (ISCONNECT) {
-            Log.d("Printer Status",printerBinder?.isConnect(address).toString())
+//            Log.d("Printer Status", printerBinder?.isConnect(address).toString())
 
-            printerBinder?.writeDataByYouself(address,object : TaskCallback {
+            printerBinder?.writeDataByYouself(address, object : TaskCallback {
                 override fun OnSucceed() {
+                    firstPrint = true
                     Toast.makeText(
                         getZWApplicationContext(),
 //                        getString(R.string.send_success),
@@ -862,11 +886,12 @@ class ZywellPrinterPlugin : FlutterPlugin, MethodCallHandler {
 
                 val list: MutableList<ByteArray> = ArrayList()
                 list.add(DataForSendToPrinterPos58.initializePrinter())
-
-//                list.add(DataForSendToPrinterTSC.sizeBymm(invoiceWidth, invoiceHeight))
-//                list.add(DataForSendToPrinterTSC.gapBymm(10.0, 0.0))
-//                list.add(DataForSendToPrinterTSC.cls())
-//                list.add(DataForSendToPrinterTSC.direction(0))
+                if (!firstPrint) {
+                    list.add(DataForSendToPrinterTSC.sizeBymm(invoiceWidth, invoiceHeight))
+                    list.add(DataForSendToPrinterTSC.gapBymm(10.0, 0.0))
+                    list.add(DataForSendToPrinterTSC.cls())
+                    list.add(DataForSendToPrinterTSC.direction(0))
+                }
                 for (i in data.indices) {
                     val item = data[i]
                     val content = item["text"] as String
@@ -874,28 +899,67 @@ class ZywellPrinterPlugin : FlutterPlugin, MethodCallHandler {
                     val y = item["paddingToTopOfInvoice"] as Double
                     val font = item["font"] as String
                     when (item["contentType"] as String) {
-                        "text" -> {
-//                            list.add(DataForSendToPrinterTSC.text(x.roundToInt(), y.roundToInt(), font, 0, 1, 1, content))
+                        "PrintType.text" -> {
+                            list.add(
+                                DataForSendToPrinterTSC.text(
+                                    x.roundToInt(),
+                                    y.roundToInt(),
+                                    font,
+                                    0,
+                                    1,
+                                    1,
+                                    content
+                                )
+                            )
 
-                            list.add(StringUtils.strTobytes(content));
+//                            list.add(StringUtils.strTobytes(content));
                         }
-                        "barcode" -> {
-                            list.add(DataForSendToPrinterTSC.barCode(x.roundToInt(), y.roundToInt(), "128", item["height"] as Int, 1, 0, 2, 2, content))}
-                        "qr" -> {
-                            list.add(DataForSendToPrinterTSC.qrCode(x.roundToInt(), y.roundToInt(), "M", 3, "A", 0, "M1", "S3", content))
+
+                        "PrintType.barcode" -> {
+                            list.add(
+                                DataForSendToPrinterTSC.barCode(
+                                    x.roundToInt(),
+                                    y.roundToInt(),
+                                    "128",
+                                    item["height"] as Int,
+                                    1,
+                                    0,
+                                    2,
+                                    2,
+                                    content
+                                )
+                            )
+                        }
+
+                        "PrintType.qr" -> {
+                            list.add(
+                                DataForSendToPrinterTSC.qrCode(
+                                    x.roundToInt(),
+                                    y.roundToInt(),
+                                    "M",
+                                    3,
+                                    "A",
+                                    0,
+                                    "M1",
+                                    "S3",
+                                    content
+                                )
+                            )
                         }
                     }
 
                 }
 
-//                list.add(DataForSendToPrinterTSC.print(1))
-//                list.add(DataForSendToPrinterTSC.eop())
-//
-////                list.add(DataForSendToPrinterTSC.feed(1))
-//                list.add(DataForSendToPrinterTSC.cut())
-////                list.add(DataForSendToPrinterTSC.cls())
+                list.add(DataForSendToPrinterTSC.print(1))
+                list.add(DataForSendToPrinterTSC.eop())
 
-                list.add(DataForSendToPrinterPos58.printAndFeedLine());
+//                list.add(DataForSendToPrinterTSC.feed(1))
+                list.add(DataForSendToPrinterTSC.cut())
+//                list.add(DataForSendToPrinterTSC.cls())
+
+                list.add(DataForSendToPrinterTSC.print(printCount++));
+                list.add(DataForSendToPrinterTSC.feed(printCount++));
+//                list.add(DataForSendToPrinterPos80.printAndFeedLine())
                 list
             })
 
@@ -910,7 +974,7 @@ class ZywellPrinterPlugin : FlutterPlugin, MethodCallHandler {
     }
 
 
-  private  fun convertGreyImg(img: Bitmap): Bitmap {
+    private fun convertGreyImg(img: Bitmap): Bitmap {
         val width = img.width
         val height = img.height
 
@@ -977,7 +1041,7 @@ class ZywellPrinterPlugin : FlutterPlugin, MethodCallHandler {
                 result.success(result)
             } else {
                 // The queue is empty
-                result.error("EMPTY","The queue is empty", null)
+                result.error("EMPTY", "The queue is empty", null)
             }
         } else {
             result.error("InvalidArgument", "IP address is null", null)
@@ -998,9 +1062,10 @@ class ZywellPrinterPlugin : FlutterPlugin, MethodCallHandler {
             val isConnected = printerBinder!!.isConnect(ip)
             result.success(isConnected)
         } else {
-            result.error("InvalidArgument", "IP address is null",null)
+            result.error("InvalidArgument", "IP address is null", null)
         }
     }
+
     fun disconnectPort(ip: String?, result: Result) {
         if (ip != null) {
             printerBinder!!.disconnectCurrentPort(ip, object : TaskCallback {

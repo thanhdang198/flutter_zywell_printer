@@ -66,5 +66,5 @@ flutter {
 
 dependencies {
 
-    implementation files('libs/PosPrinterSDK.jar')
+//    implementation files('libs/PosPrinterSDK.jar')
 }
