@@ -45,6 +45,12 @@ class MockZywellPrinterPlatform
     // TODO: implement printImage
     throw UnimplementedError();
   }
+
+  @override
+  Future<bool> clearBuffer() {
+    // TODO: implement clearBuffer
+    throw UnimplementedError();
+  }
 }
 
 void main() {
