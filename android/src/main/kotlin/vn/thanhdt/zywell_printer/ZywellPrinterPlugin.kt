@@ -49,9 +49,8 @@ import net.posprinter.utils.DataForSendToPrinterPos58
 import net.posprinter.utils.DataForSendToPrinterPos80
 import net.posprinter.utils.DataForSendToPrinterTSC
 import net.posprinter.utils.PosPrinterDev
+import java.io.ByteArrayOutputStream
 import java.util.Locale
-import java.util.Timer
-import java.util.TimerTask
 import kotlin.math.roundToInt
 
 
@@ -81,6 +80,7 @@ class ZywellPrinterPlugin : FlutterPlugin, MethodCallHandler {
             override fun onServiceConnected(name: ComponentName, service: IBinder) {
                 if (service is PrinterBinder)
                     printerBinder = service as PrinterBinder
+
                 Log.e("myBinder", "connect")
             }
 
@@ -140,6 +140,9 @@ class ZywellPrinterPlugin : FlutterPlugin, MethodCallHandler {
         }
         if (call.method == "printImage") {
             printPicture(call, result)
+        }
+        if (call.method == "printThermalImage") {
+            printReceipt(call, result)
         } else {
             println(call.method)
             result.notImplemented()
@@ -676,6 +679,174 @@ class ZywellPrinterPlugin : FlutterPlugin, MethodCallHandler {
 //            ).show()
 //        }
 //    }
+
+//    private fun printBitmap() {
+////        final Bitmap bitmap1 = BitmapFactory.decodeResource(getResources(), R.drawable.test);
+////        val bitmap1 = BitmapProcess.compressBmpByYourWidth(
+////            BitmapFactory.decodeResource(
+////                getResources(),
+////                R.drawable.test
+////            ), 300
+////        )
+//            printerBinder.writeDataByYouself(object : TaskCallback {
+//                override fun OnSucceed() {
+//                    Toast.makeText(
+//                        getApplicationContext(),
+//                        getString(R.string.send_success),
+//                        Toast.LENGTH_SHORT
+//                    ).show()
+//                }
+//
+//                override fun OnFailed() {
+//                    Toast.makeText(
+//                        getApplicationContext(),
+//                        getString(R.string.send_failed),
+//                        Toast.LENGTH_SHORT
+//                    ).show()
+//                }
+//            }, ProcessData {
+//            })
+//        } else {
+//            Toast.makeText(
+//                getApplicationContext(),
+//                getString(R.string.connect_first),
+//                Toast.LENGTH_SHORT
+//            ).show()
+//        }
+
+    private fun printReceipt(call: MethodCall, result: Result) {
+        printerBinder!!.clearBuffer(address)
+
+        val invoiceWidth: Double = call.argument<Double>("invoiceWidth")!!
+        val invoiceHeight: Double = call.argument<Double>("invoiceHeight")!!
+        val gapWidth: Double = call.argument<Double>("gapWidth")!!
+        val gapHeight: Double = call.argument<Double>("gapHeight")!!
+        val imageTargetWidth: Double = call.argument<Double>("imageTargetWidth")!!
+        val encodedImage: String = call.argument<String>("image")!!
+
+
+        val decodedString: ByteArray = Base64.decode(encodedImage, Base64.DEFAULT)
+        val bitmap = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
+        if(bitmap != null && address != null) {
+            val bitmap1 = BitmapProcess.compressBmpByYourWidth(bitmap, imageTargetWidth.toInt())
+            val bitmapToPrint: Bitmap = convertGreyImg(bitmap1)
+            val stream = ByteArrayOutputStream()
+            bitmapToPrint.compress(Bitmap.CompressFormat.PNG, 90, stream)
+            val image = stream.toByteArray()
+
+            printerBinder!!.writeDataByYouself(
+
+                address,
+
+                object : TaskCallback {
+                    override fun OnSucceed() {
+                        printerBinder!!.clearBuffer(address)
+                        result.success(true)
+
+                    }
+
+                    override fun OnFailed() {
+                        printerBinder!!.clearBuffer(address)
+
+                        result.success(false)
+                    }
+                }
+            ){
+
+                val list: MutableList<ByteArray> = java.util.ArrayList()
+                list.add(DataForSendToPrinterPos80.initializePrinter())
+                var blist: List<Bitmap?> = java.util.ArrayList()
+                blist = BitmapProcess.cutBitmap(150, bitmap1)
+                for (i in blist.indices) {
+                    list.add(
+                        DataForSendToPrinterPos80.printRasterBmp(
+                            0,
+                            blist[i],
+                            BitmapToByteData.BmpType.Dithering,
+                            BitmapToByteData.AlignType.Center,
+                            576
+                        )
+                    )
+                }
+                //                    list.add(StringUtils.strTobytes("1234567890qwe rtyuiopakjbdscm nkjdv mcdskjb"));
+                list.add(DataForSendToPrinterPos80.printAndFeedLine())
+
+                list.add(DataForSendToPrinterPos80.selectCutPagerModerAndCutPager(0x42, 0x66))
+
+                list
+            }
+        } else {
+            result.success(false)
+        }
+    }
+    @SuppressLint("SuspiciousIndentation")
+    private fun printThermalPicture(call: MethodCall, result: Result) {
+        printerBinder!!.clearBuffer(address)
+
+        val invoiceWidth: Double = call.argument<Double>("invoiceWidth")!!
+        val invoiceHeight: Double = call.argument<Double>("invoiceHeight")!!
+        val gapWidth: Double = call.argument<Double>("gapWidth")!!
+        val gapHeight: Double = call.argument<Double>("gapHeight")!!
+        val imageTargetWidth: Double = call.argument<Double>("imageTargetWidth")!!
+        val encodedImage: String = call.argument<String>("image")!!
+
+
+        val decodedString: ByteArray = Base64.decode(encodedImage, Base64.DEFAULT)
+        val bitmap = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
+
+        if (bitmap != null && address != null) {
+            val bitmap1 =
+                BitmapProcess.compressBmpByYourWidth(bitmap, imageTargetWidth.toInt())
+//            val bitmapToPrint: Bitmap = convertGreyImg(bitmap1)
+            printerBinder!!.writeDataByYouself(
+                address,
+                object : TaskCallback {
+                    override fun OnSucceed() {
+                        printerBinder!!.clearBuffer(address)
+                        result.success(true)
+
+                    }
+
+                    override fun OnFailed() {
+                        printerBinder!!.clearBuffer(address)
+
+                        result.success(false)
+                    }
+                }
+            ) {
+                val list: MutableList<ByteArray> = ArrayList()
+                // 设置标签纸大小
+
+                list.add(DataForSendToPrinterPos80.initializePrinter())
+                list.add(
+                    DataForSendToPrinterTSC.sizeBymm(
+                        invoiceWidth,
+                        invoiceHeight
+                    )
+                )
+                // 设置间隙
+                list.add(DataForSendToPrinterTSC.gapBymm(gapWidth, gapHeight))
+                // 清除缓存
+                list.add(DataForSendToPrinterTSC.cls())
+                list.add(
+                    DataForSendToPrinterTSC.bitmap(
+                        -2, 10, 0, bitmap1,
+                        BitmapToByteData.BmpType.Dithering
+                    )
+                )
+                list.add(DataForSendToPrinterTSC.print(1))
+
+                list.add(DataForSendToPrinterTSC.cut())
+                list.add(DataForSendToPrinterTSC.eop())
+                list.add(DataForSendToPrinterTSC.eoj())
+                list.add(DataForSendToPrinterPos58.endOfLable())
+
+                list
+            }
+        } else {
+            result.success(false)
+        }
+    }
 
     @SuppressLint("SuspiciousIndentation")
     private fun printPicture(call: MethodCall, result: Result) {

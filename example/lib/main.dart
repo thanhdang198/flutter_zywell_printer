@@ -112,7 +112,7 @@ class _MyAppState extends State<MyApp> {
 
       Uint8List bytes = Uint8List.fromList(values);
 
-      _zywellPrinterPlugin.printImage(
+      _zywellPrinterPlugin.printThermalImage(
           image: bytes,
 
           /// Độ rộng của hoá đơn
@@ -129,7 +129,7 @@ class _MyAppState extends State<MyApp> {
 
           /// Độ rộng của ảnh dùng để in
           imageTargetWidth: 600);
-
+//192.168.0.207
       // _zywellPrinterPlugin.printImage(
       //     image: bytes,
       //     invoiceWidth: 50,
@@ -228,7 +228,7 @@ class _MyAppState extends State<MyApp> {
                   setState(() {
                     devices.add(addr);
                   });
-                }, '192.168.0.207');
+                }, '192.168.1.207');
               },
               tooltip: 'Scan',
               child: const Icon(Icons.scanner),

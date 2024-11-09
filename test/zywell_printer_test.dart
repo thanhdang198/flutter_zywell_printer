@@ -51,6 +51,12 @@ class MockZywellPrinterPlatform
     // TODO: implement clearBuffer
     throw UnimplementedError();
   }
+
+  @override
+  Future<void> printThermalImage(data) {
+    // TODO: implement printThermalImage
+    throw UnimplementedError();
+  }
 }
 
 void main() {

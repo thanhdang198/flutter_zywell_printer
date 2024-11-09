@@ -52,4 +52,9 @@ class MethodChannelZywellPrinter extends ZywellPrinterPlatform {
   Future<void> connectUSB(String address) async {
     await methodChannel.invokeMethod('connectUSB', address);
   }
+
+  @override
+  Future<void> printThermalImage(dynamic data) async {
+    await methodChannel.invokeMethod('printThermalImage', data);
+  }
 }

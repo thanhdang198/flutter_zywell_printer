@@ -65,6 +65,8 @@ public class ZywellPrinterPlugin: NSObject, FlutterPlugin {
         wifiManager?.posDisConnect()
     case "printImage":
         labelPictureClick(call: call, result: result)
+    case "printThermalImage":
+        thermalPictureClick(call: call, result: result)
     default:
       result(FlutterMethodNotImplemented)
     }
@@ -264,11 +266,57 @@ public class ZywellPrinterPlugin: NSObject, FlutterPlugin {
         data = TscCommand.print(1)
         dataM.append(data)
         
+        data = TscCommand.cut()
+        dataM.append(data)
         
         wifiManager?.posWriteCommand(with: dataM)
         
     }
+    
+    // MARK: - Label print picture
+    @IBAction func thermalPictureClick(call: FlutterMethodCall, result: @escaping FlutterResult) {
+        
+        let myFlutterData = call.arguments as? NSDictionary
+        
+        let base64Image = myFlutterData?["image"] as? String
+        
+        
+        let invoiceWidth = myFlutterData?["invoiceWidth"] as! Double
+        let invoiceHeight = myFlutterData?["invoiceHeight"] as! Double
+        let gapWidth = myFlutterData?["gapWidth"] as! Double
+        let gapHeight = myFlutterData?["gapHeight"] as! Double
+        let imageTargetWidth = myFlutterData?["imageTargetWidth"] as! Double
+        let myData = Data(base64Encoded:base64Image!)!
+        
+        guard let uiImage = UIImage(data: myData)else{return }
 
+        guard let image = imageCompressForWidthScale(sourceImage: uiImage, targetWidth: imageTargetWidth) else { return }
+        var dataM = Data()
+        var data = Data()
+        data=TscCommand.cls()
+        dataM.append(data)
+        data = TscCommand.initialPrinter()
+//        dataM.append(data)
+//        
+//        data = TscCommand.sizeBymm(withWidth: invoiceWidth, andHeight: invoiceHeight)
+//        dataM.append(data)
+//        data = TscCommand.gapBymm(withWidth:gapWidth, andHeight: gapHeight)
+//        dataM.append(data)
+//        data = TscCommand.cls()
+//        dataM.append(data)
+//        data = TscCommand.bitmapWith(x:10, andY: 10, andMode: 0, andImage: image, andBmpType: Dithering)
+//        dataM.append(data)
+//        data = TscCommand.print(1)
+//        dataM.append(data)
+//        
+//        data = TscCommand.cut()
+//        dataM.append(data)
+        
+//        wifiManager?.posWriteCommand(with: dataM)
+        
+        wifiManager?.posWriteCommand(with:PosCommand.printRasteBmp(withM: RasterNolmorWH, andImage: image, andType: Dithering))
+        wifiManager?.posWriteCommand(with:PosCommand.selectCutPageModelAndCutpage(0))
+    }
     
     
 //    @objc(printPic:result:)

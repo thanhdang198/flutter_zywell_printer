@@ -82,4 +82,21 @@ class ZywellPrinter {
   Future<void> connectUSB(String address) {
     return ZywellPrinterPlatform.instance.connectUSB(address);
   }
+
+  Future<void> printThermalImage(
+      {required Uint8List image,
+      double invoiceWidth = 50,
+      required double invoiceHeight,
+      double gapWidth = 0,
+      double gapHeight = 0,
+      double imageTargetWidth = 0}) {
+    return ZywellPrinterPlatform.instance.printThermalImage({
+      'image': base64.encode(image),
+      'invoiceWidth': invoiceWidth,
+      'invoiceHeight': invoiceHeight,
+      'gapWidth': gapWidth,
+      'gapHeight': gapHeight,
+      'imageTargetWidth': imageTargetWidth
+    });
+  }
 }

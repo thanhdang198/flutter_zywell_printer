@@ -57,4 +57,8 @@ abstract class ZywellPrinterPlatform extends PlatformInterface {
   Future<void> printImage(dynamic data) {
     throw UnimplementedError('printImage() has not been implemented.');
   }
+
+  Future<void> printThermalImage(dynamic data) {
+    throw UnimplementedError('printThermalImage() has not been implemented.');
+  }
 }
